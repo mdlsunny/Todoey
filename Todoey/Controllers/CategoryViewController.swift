@@ -8,7 +8,7 @@
 import UIKit
 import RealmSwift
 
-class CategoryViewController: UITableViewController {
+class CategoryViewController: SwipeTableViewController {
 
     let realm = try! Realm()
     var categories: Results<Category>?
@@ -20,7 +20,7 @@ class CategoryViewController: UITableViewController {
 
     //MARK: - TableView Datasource Methods
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         cell.textLabel?.text = categories?[indexPath.row].name ?? "No Categories Added Yet"
         return cell
     }
@@ -31,16 +31,28 @@ class CategoryViewController: UITableViewController {
     
     
     //MARK: - Model Manipulation Methods
-    func save(category: Category) {
+    func add(category: Category) {
         do {
             try realm.write {
                 realm.add(category)
             }
         } catch {
-            print("Error saving category \(error)")
+            print("Error adding category \(error)")
         }
         tableView.reloadData()
     }
+    
+    func remove(category: Category) {
+        do {
+            try realm.write {
+                realm.delete(category)
+            }
+        } catch {
+            print("Error deleting category \(error)")
+        }
+        //        tableView.reloadData() // Remove this line after using var options = SwipeOptions(); options.expansionStyle = .destructive
+    }
+    
     
     func loadCategories() {
         categories = realm.objects(Category.self)
@@ -48,15 +60,22 @@ class CategoryViewController: UITableViewController {
     }
     
     
+    override func updateModel(at indexPath: IndexPath) {
+        super.updateModel(at: indexPath)
+        if let categoryForDeletion = categories?[indexPath.row] {
+            remove(category: categoryForDeletion)
+        }
+    }
+    
+    
+    
     //MARK: - Add New Categories
-
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         let alert = UIAlertController(title: "Add New Category", message: "", preferredStyle: .alert)
         let action = UIAlertAction(title: "Add", style: .default) { (action) in
             let newCategory = Category()
             newCategory.name = alert.textFields![0].text!
-            print(newCategory)
-            self.save(category: newCategory)
+            self.add(category: newCategory)
         }
         
         alert.addTextField { (alertTextField) in
@@ -80,6 +99,8 @@ class CategoryViewController: UITableViewController {
         }
         
     }
-    
-    
 }
+
+
+
+// Learnings: use realm.add() for category, use realm.append() for items because items are in category (list)

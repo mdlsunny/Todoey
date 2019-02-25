@@ -8,7 +8,7 @@
 import UIKit
 import RealmSwift
 
-class ToDoListViewController: UITableViewController {
+class ToDoListViewController: SwipeTableViewController {
 
     let realm = try! Realm()
     var todoItems: Results<Item>?
@@ -26,7 +26,7 @@ class ToDoListViewController: UITableViewController {
     
     //MARK: - Tableview Datasource Methods
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoListItemCell", for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         if let item = todoItems?[indexPath.row] {
             cell.textLabel?.text = item.title
             cell.accessoryType = item.done ? .checkmark : .none
@@ -41,9 +41,32 @@ class ToDoListViewController: UITableViewController {
     }
     
     
+    
+    //MARK: - Model Manipulation Methods
+    
+    func loadItems() {
+        todoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
+        tableView.reloadData()
+    }
+
+    
+    override func updateModel(at indexPath: IndexPath) {
+        super.updateModel(at: indexPath)
+        if let item = todoItems?[indexPath.row] {
+            do {
+                try realm.write {
+                    realm.delete(item)
+                }
+            } catch {
+                print("Error deleting item \(error)")
+            }
+        }
+    }
+    
+    
+    
     //MARK: - TableView Delegate Methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        
         if let item = todoItems?[indexPath.row] {
             do {
                 try realm.write {
@@ -57,7 +80,6 @@ class ToDoListViewController: UITableViewController {
         tableView.deselectRow(at: indexPath, animated: true)
     }
     
-    
     //MARK: - Add New Items
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
@@ -69,7 +91,6 @@ class ToDoListViewController: UITableViewController {
                     let newItem = Item()
                     newItem.title = alert.textFields![0].text!
                     currentCategory.items.append(newItem)
-                    print(newItem)
                 }
                 } catch {
                     print("Error saving item \(error)")
@@ -85,14 +106,6 @@ class ToDoListViewController: UITableViewController {
         alert.addAction(action)
         present(alert, animated: true, completion: nil)
     }
-    
-    //MARK: - Model Manipulation Methods
-    
-    func loadItems() {
-        todoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
-        tableView.reloadData()
-    }
-
 }
 
 

@@ -7,6 +7,7 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 class ToDoListViewController: SwipeTableViewController {
 
@@ -21,8 +22,37 @@ class ToDoListViewController: SwipeTableViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        tableView.separatorStyle = .none
+    }
+    
+    @IBOutlet weak var itemSearchBar: UISearchBar!
+    
+    override func viewWillAppear(_ animated: Bool) {
+        guard let colorHex = selectedCategory?.backgroundHexColor else { fatalError("Selected category background hex color does not exist") }
+        updateNavBar(withHexCode: colorHex)
+        title = selectedCategory?.name
+
     }
 
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        updateNavBar(withHexCode: "76D6FF")
+    }
+    
+    
+    //MARK: - Navigation Bar Setup Methods
+    func updateNavBar(withHexCode colorHexCode: String) {
+        guard let navBar = navigationController?.navigationBar else { fatalError("Navigation bar does not exist") }
+
+        guard let navBarColor = UIColor(hexString: colorHexCode) else { fatalError("Navigation bar color does not exist") }
+
+        navBar.barTintColor = navBarColor
+        itemSearchBar.barTintColor = navBarColor
+        navBar.tintColor = ContrastColorOf(navBarColor, returnFlat: true)
+        navBar.largeTitleTextAttributes = [NSAttributedString.Key.foregroundColor : ContrastColorOf(navBarColor, returnFlat: true)]        
+    }
+    
+    
     
     //MARK: - Tableview Datasource Methods
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -30,6 +60,13 @@ class ToDoListViewController: SwipeTableViewController {
         if let item = todoItems?[indexPath.row] {
             cell.textLabel?.text = item.title
             cell.accessoryType = item.done ? .checkmark : .none
+            if let color = UIColor(hexString: selectedCategory!.backgroundHexColor)?
+                .darken(byPercentage: CGFloat(indexPath.row)/CGFloat(todoItems!.count))
+            {
+                cell.backgroundColor = color
+                cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+            }
+
         } else {
             cell.textLabel?.text = "No Item Added Yet"
         }
@@ -90,6 +127,8 @@ class ToDoListViewController: SwipeTableViewController {
                 try self.realm.write {
                     let newItem = Item()
                     newItem.title = alert.textFields![0].text!
+                    newItem.backgroundHexColor = UIColor.randomFlat.hexValue()
+
                     currentCategory.items.append(newItem)
                 }
                 } catch {
@@ -129,3 +168,6 @@ extension ToDoListViewController: UISearchBarDelegate {
     }
 
 }
+
+
+// Learnings: use guard let instead of if let when we think 99% cases will go through (we never write the else {} part)
